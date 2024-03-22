@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import xml.etree.ElementTree as ET
 from xml.dom.minidom import parseString
-
+from PIL import Image
 
 def generate_xml(filename, bbox_list, img_size, class_names, dest_folder):
     """
@@ -37,17 +37,18 @@ def generate_xml(filename, bbox_list, img_size, class_names, dest_folder):
         f.write(xml_str)
 
 
-def extract_bboxes_from_segmentation(seg_img, class_names):
+def extract_bboxes_from_segmentation(seg_img):
     """
     从分割图像中提取边界框。
     """
     bboxes = []
-    for cls_val, cls_name in enumerate(class_names, start=1):  # 假设类别ID从1开始
-        cls_mask = seg_img == cls_val
-        if np.any(cls_mask):
-            y, x = np.where(cls_mask)
-            xmin, xmax, ymin, ymax = x.min(), x.max(), y.min(), y.max()
-            bboxes.append(((xmin, ymin, xmax, ymax), cls_name))
+    target = Image.open(seg_img)
+    gt2D = np.array(target)
+    y_indices, x_indices = np.where(gt2D > 0)
+    xmin, xmax = np.min(x_indices), np.max(x_indices)
+    ymin, ymax = np.min(y_indices), np.max(y_indices)
+
+    bboxes.append(((xmin, ymin, xmax, ymax), "shetou"))
     return bboxes
 
 if __name__ == "__main__":
@@ -63,7 +64,7 @@ if __name__ == "__main__":
         img_size = seg_img.shape + (1,)  # 假设是单通道图像
 
         # 提取边界框信息
-        bboxes = extract_bboxes_from_segmentation(seg_img, class_names[1:])  # 从1开始去除背景
+        bboxes = extract_bboxes_from_segmentation(seg_img_path)  # 从1开始去除背景
 
         # 生成XML
         filename = os.path.splitext(os.path.basename(seg_img_path))[0]
